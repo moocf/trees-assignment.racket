@@ -251,6 +251,8 @@ element numbering.
 
 #+NAME: g
 #+BEGIN_SRC scheme
+; (g el lst): E X L -> L
+; increment 1st value of all pairs, and return (el . lst)
 (define g
   (lambda (el lst)
     (cons el (list/map pair/add1 lst))))
@@ -304,6 +306,8 @@ of an ascending sort order.
 
 #+NAME: bubble_once_by
 #+BEGIN_SRC scheme
+; (bubble-once-by lst f): L X F -> L
+; runs a single pass of bubble sort on list
 (define bubble-once-by
   (lambda (lst f)
     (if (atmost1? lst)
@@ -316,12 +320,16 @@ Finally, multiple bubblings lead to a completely sorted list.
 
 #+NAME: bubble_sort
 #+BEGIN_SRC scheme
+; (bubble-sort-by lst f): L X F -> L
+; bubble sorts a list with given predicate f
 (define bubble-sort-by
   (lambda (lst f)
     (if (atmost1? lst)
         lst
         (bubble-once-by (cons (car lst) (bubble-sort-by (cdr lst) f)) f))))
 
+; (bubble-sort lst): L -> L
+; bubble sorts a list in ascending order
 (define bubble-sort
   (lambda (lst)
     (bubble-sort-by lst <=)))
