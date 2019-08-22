@@ -85,8 +85,8 @@ of its subtree. It takes an initial value =init= and the tree itself =tr=.
 
 ** Filter
 
-This function =tree/filter= keeps returns a tree with only those nodes, who themselves
-as well as all their parents satify the function =f=, applied to their =key=.
+This function =tree/filter= returns a tree with only those nodes, who themselves
+as well as all their parents satisfy the function =f=, applied to their =key=.
 
 : if a node's key does not satisfy f, both its subtrees are removed and its key set to 0
 : if a leaf's key does not satisfy f, its key is set to 0
@@ -108,49 +108,267 @@ as well as all their parents satify the function =f=, applied to their =key=.
 
 ** Path
 
-#+NAME: tree_ex
+This function =tree/path= returns a list of lefts, rights showing a path to =n=
+in tree =tr=. It returns =#f= if no such number is found.
+
+: in case of leaf, key=n? -> () else #f
+: in case of node, key=n? -> (), in left subtree -> (left subtree), ...right, else #f
+
+#+NAME: tree_path
 #+BEGIN_SRC scheme
+; (tree/path n tr): N X TR -> L
+; returns list of lefts, rights showing path to n in tree tr, #f if not found
+(define tree/path
+  (lambda (n tr)
+    (cases tree tr
+      (leaf (key)
+            (if (= key n) (list) #f))
+      (node (key left-parent right-parent)
+            (cond
+              [(= key n) (list)]
+              [(tree/path n left-parent) (cons `left (tree/path n left-parent))]
+              [(tree/path n right-parent) (cons `right (tree/path n right-parent))]
+              [else #f])))))
+
+(define path tree/path)
 #+END_SRC
 
 
 
+* List
 
+** Reverse
 
+This function is supposed to be able to reverse a list using =reduce= for lists.
+Let a basic reduce implementation for list reduce be as follows:
 
+: (base case) lst=null? -> init
+: (indc case) else      -> f(lst[0], reduce(lst[1..end]))
 
-#+NAME: tree_ex
+#+NAME: list_reduce
 #+BEGIN_SRC scheme
+; (list/reduce f init lst): F X V X L -> V
+; reduces list of values to a single value
+(define list/reduce
+  (lambda (f init lst)
+    (if (null? lst)
+        init
+        (f (car lst) (list/reduce f init (cdr lst))))))
+#+END_SRC
+
+How can =list/reduce= be used to implement =list/reverse=? Even though
+the reduce function picks the elements of the list from the end one by
+one, using =cons= simply results back into the original list. If instead
+of plain =cons=, the picked value is somehow appended to the end of the
+working list, the result should be a reversed list.
+
+: reduce with plain cons
+: lst=(1 2 3 `4)  acc=(4)
+: lst=(1 2 `3 4)  acc=(3 4)
+: lst=(1 `2 3 4)  acc=(2 3 4)
+
+: reduce with append
+: lst=(1 2 3 `4)  acc=(4)
+: lst=(1 2 `3 4)  acc=(4 3)
+: lst=(1 `2 3 4)  acc=(4 3 2)
+
+Say, list append is a function which takes a number =n=, and a list =lst=
+and appends the value =n= to the end of the list. Think of this as applying
+=reduce= with =cons= to a list which only contains =n=.
+
+: construct using each value of list to the value as list
+
+#+NAME: list_append
+#+BEGIN_SRC scheme
+; (list/append n lst): N X L -> L
+; appends a value to end of list
+(define list/append
+  (lambda (n lst)
+    (list/reduce cons (list n) lst)))
+#+END_SRC
+
+Now this append function can be used in place of "plain" =cons= with
+=reduce= and it would be able to reverse the list.
+
+: for each value from the end, append it to the list
+
+#+NAME: list_reverse
+#+BEGIN_SRC scheme
+; (list/reverse lst): L -> L
+; reverses the order of elements in a list
+(define list/reverse
+  (lambda (lst)
+    (list/reduce list/append (list) lst)))
+
+(define reverse list/reverse)
 #+END_SRC
 
 
-Some more text.
 
-#+NAME: How to open a code block
-#+BEGIN_EXAMPLE
- 
-<s
-ENTER
+** Number elements
 
-#+END_EXAMPLE
+The objective here is to write a procedure =g= such that =number-elements=
+could be defined as:
 
-#+NAME: code_block_1
-#+BEGIN_SRC python
-   
-def tautology():
-    return True
+#+BEGIN_SRC scheme
+(define number-elements
+  (lambda (lst)
+    (if (null? lst)
+        '()
+        (g (list 0 (car lst))
+            (number-elements (cdr lst))))))
 #+END_SRC
 
-#+NAME: code_block_2
-#+BEGIN_SRC python
-   
-def contradiction():
-    return False
+It appears that =g= is behaving as a =cons= function as well as incrementing
+the first value of each pair in list. Let there be a function to increment the
+first value of a pair.
+
+#+NAME: pair_add1
+#+BEGIN_SRC scheme
+; (pair/add1 p): P -> P
+; increments first value of pair only
+(define pair/add1
+  (lambda (p)
+    (cons (add1 (car p)) (cdr p))))
 #+END_SRC
+
+A list map function can be used to apply =pair/add1= to every pair in the list.
+
+#+NAME: list_map
+#+BEGIN_SRC scheme
+; (list/map f lst): F X L -> L
+; applies a function to every element of list
+(define list/map
+  (lambda (f lst)
+    (if (null? lst)
+        (list)
+        (cons (f (car lst)) (list/map f (cdr lst))))))
+#+END_SRC
+
+The above map function can be used to increment the first value of all pairs
+in the list, and =cons= the desired value to it finally. This would enable
+element numbering.
+
+#+NAME: g
+#+BEGIN_SRC scheme
+(define g
+  (lambda (el lst)
+    (cons el (list/map pair/add1 lst))))
+#+END_SRC
+
+
+
+** Bubble sort
+
+The objective here is to write the bubble sort algorithm without using any
+assignment. To begin with, lets make sure that the list has atleast 2 elements
+(or the inverted case, atmost 1 element).
+
+#+NAME: atmost1
+#+BEGIN_SRC scheme
+; (atmost1? lst): L -> B
+; return #t if list has atmost 1 element(s).
+(define atmost1?
+  (lambda (lst)
+    (or (null? lst) (null? (cdr lst)))))
+#+END_SRC
+
+Now lets use the desired =swap= function to swap the first 2 elements of the list.
+
+#+NAME: swap
+#+BEGIN_SRC scheme
+; (swap lst): L -> L
+; swaps the first two elements of list
+(define swap
+  (lambda (lst)
+    (if (atmost1? lst)
+        lst
+        (cons (cadr lst) (cons (car lst) (cddr lst))))))
+#+END_SRC
+
+#+NAME: swap_by
+#+BEGIN_SRC scheme
+; (swap-by lst f): L X F -> L
+; swaps the first 2 elements of list using given function
+(define swap-by
+  (lambda (lst f)
+    (if (or (atmost1? lst) (f (car lst) (cadr lst)))
+        lst
+        (swap lst))))
+#+END_SRC
+
+Now that we have the ability to conditionally swap two elements in a list,
+lets write a single pass on bubble sort through the list. This would have
+the effect of bringing the largest value to the bottom of the list, in case
+of an ascending sort order.
+
+#+NAME: bubble_once_by
+#+BEGIN_SRC scheme
+(define bubble-once-by
+  (lambda (lst f)
+    (if (atmost1? lst)
+        lst
+        (let ([lst (swap-by lst f)])
+          (cons (car lst) (bubble-once-by (cdr lst) f))))))
+#+END_SRC
+
+Finally, multiple bubblings lead to a completely sorted list.
+
+#+NAME: bubble_sort
+#+BEGIN_SRC scheme
+(define bubble-sort-by
+  (lambda (lst f)
+    (if (atmost1? lst)
+        lst
+        (bubble-once-by (cons (car lst) (bubble-sort-by (cdr lst) f)) f))))
+
+(define bubble-sort
+  (lambda (lst)
+    (bubble-sort-by lst <=)))
+#+END_SRC
+
 
 
 * This is where you put it all together
 
-#+BEGIN_SRC python :eval no :noweb yes :tangle Intro.py 
-<<code_block_1>>
-<<code_block_2>>
+#+BEGIN_SRC scheme :eval no :noweb yes :tangle fp.rkt 
+<<tree_defn>>
+
+<<tree_ex>>
+
+<<tree_map>>
+
+<<tree_reduce>>
+
+<<tree_filter>>
+
+<<tree_path>>
+
+
+
+<<list_reduce>>
+
+<<list_append>>
+
+<<list_reverse>>
+
+
+
+<<pair_add1>>
+
+<<list_map>>
+
+<<g>>
+
+
+
+<<atmost1>>
+
+<<swap>>
+
+<<swap_by>>
+
+<<bubble_once_by>>
+
+<<bubble_sort>>
 #+END_SRC
