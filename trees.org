@@ -1,0 +1,156 @@
+#+TITLE: Functional programming on Trees
+#+AUTHOR: Subhajit Sahu (2018801013)
+
+* Tree
+
+The binary tree consists of nodes each with a number =key=, and two child
+subtrees called =left-parent= and =right-parent=.
+
+#+NAME: tree_defn
+#+BEGIN_SRC scheme
+(require eopl)
+
+(define-datatype tree tree?
+  [leaf (key number?)]
+  [node (key number?) (left-parent tree?) (right-parent tree?)])
+#+END_SRC
+
+
+A sample tree using the data structure can be as follows. Here, it has 2
+leaf nodes (1, 2), and 1 parent node (3).
+
+#+NAME: tree_ex
+#+BEGIN_SRC scheme
+(define node-1
+  (leaf 1))
+(define node-2
+  (leaf 2))
+(define root
+  (node 3 node-1 node-2))
+#+END_SRC
+
+
+
+** Map
+
+This function =tree/map= returns a new tree by applying unary function =f= to
+each node of tree =tr=. The base case is a tree with a single leaf, in which
+case it applies =f= to its =key=. In the recursive case, the tree is a node
+with 2 subtrees, so it maps the 2 substrees and applies =f= to its =key=.
+
+: tree is leaf? -> leaf(f(key))
+: tree is node? -> node(f(key), map(left), map (right))
+
+#+NAME: tree_map
+#+BEGIN_SRC scheme
+; (tree/map f tr): F X TR -> TR
+; returns a new tree by applying each node to tr
+(define tree/map
+  (lambda (f tr)
+    (cases tree tr
+      (leaf (key)
+            (leaf (f key)))
+      (node (key left-parent right-parent)
+            (node (f key) (tree/map f left-parent) (tree/map f right-parent))))))
+#+END_SRC
+
+
+
+** Reduce
+
+This function =tree/reduce= reduces a tree of values to a single value by
+applying binary function =f= to each node of the tree and the reduced value
+of its subtree. It takes an initial value =init= and the tree itself =tr=.
+
+: tree is leaf? -> leaf(f(key, init))
+: tree is node? -> node(f(key, f(map(left), map(right))))
+
+#+NAME: tree_reduce
+#+BEGIN_SRC scheme
+; (tree/reduce f init tr): F X V X TR -> V
+; reduces tree of values to a single value
+(define tree/reduce
+  (lambda (f init tr)
+    (cases tree tr
+      (leaf (key)
+            (f key init))
+      (node (key left-parent right-parent)
+            (f key (f (tree/reduce f init left-parent) (tree/reduce f init right-parent)))))))
+
+(define treeduce tree/reduce)
+(define reduce tree/reduce)
+#+END_SRC
+
+
+
+** Filter
+
+This function =tree/filter= keeps returns a tree with only those nodes, who themselves
+as well as all their parents satify the function =f=, applied to their =key=.
+
+: if a node's key does not satisfy f, both its subtrees are removed and its key set to 0
+: if a leaf's key does not satisfy f, its key is set to 0
+
+#+NAME: tree_filter
+#+BEGIN_SRC scheme
+; (tree/filter f tr): F X TR -> TR
+; filter part of tree which satisfies f
+(define tree/filter
+  (lambda (f tr)
+    (cases tree tr
+      (leaf (key)
+            (if (f key) (leaf key) (leaf 0)))
+      (node (key left-parent right-parent)
+            (if (f key) (node key (tree/filter f left-parent) (tree/filter f right-parent)) (leaf 0))))))
+#+END_SRC
+
+
+
+** Path
+
+#+NAME: tree_ex
+#+BEGIN_SRC scheme
+#+END_SRC
+
+
+
+
+
+
+
+#+NAME: tree_ex
+#+BEGIN_SRC scheme
+#+END_SRC
+
+
+Some more text.
+
+#+NAME: How to open a code block
+#+BEGIN_EXAMPLE
+ 
+<s
+ENTER
+
+#+END_EXAMPLE
+
+#+NAME: code_block_1
+#+BEGIN_SRC python
+   
+def tautology():
+    return True
+#+END_SRC
+
+#+NAME: code_block_2
+#+BEGIN_SRC python
+   
+def contradiction():
+    return False
+#+END_SRC
+
+
+* This is where you put it all together
+
+#+BEGIN_SRC python :eval no :noweb yes :tangle Intro.py 
+<<code_block_1>>
+<<code_block_2>>
+#+END_SRC
